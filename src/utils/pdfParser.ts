@@ -1,4 +1,3 @@
-
 import type { Requirement, CadenceInfo } from "@/pages/Index";
 
 // Mock PDF parsing function - in a real implementation, you would use pdf-parse or similar
@@ -62,9 +61,10 @@ const readFileAsText = (file: File): Promise<string> => {
 
 const generateMockPDFContent = (filename: string): string => {
   // Generate realistic mock PDF content for demonstration based on the uploaded image
-  const cadenceNumber = Math.floor(Math.random() * 5) + 1;
+  const cadenceVersions = ['26.26.165', '27.15.123', '25.14.089', '28.01.245', '26.30.178'];
+  const cadenceNumber = cadenceVersions[Math.floor(Math.random() * cadenceVersions.length)];
   
-  // Add release cadence info
+  // Add release cadence info at the beginning (first page)
   let content = `Release Cadence: ${cadenceNumber}\n\n`;
   
   // Add some header content that should be ignored
@@ -106,24 +106,40 @@ const generateMockPDFContent = (filename: string): string => {
 };
 
 const extractCadenceInfo = (filename: string, content: string): CadenceInfo | null => {
-  // Try to extract from content first
-  const cadenceMatch = content.match(/Release Cadence[:\s]+(\d+)/i);
-  if (cadenceMatch) {
-    return {
-      cadence: cadenceMatch[1],
-      filename: filename
-    };
+  // Try to extract from content first - looking for the full version format like 26.26.165
+  const cadencePatterns = [
+    /Release Cadence[:\s]+(\d+\.\d+\.\d+)/i,
+    /Cadence[:\s]+(\d+\.\d+\.\d+)/i,
+    /Version[:\s]+(\d+\.\d+\.\d+)/i
+  ];
+  
+  for (const pattern of cadencePatterns) {
+    const cadenceMatch = content.match(pattern);
+    if (cadenceMatch) {
+      console.log(`Found cadence version: ${cadenceMatch[1]} in content`);
+      return {
+        cadence: cadenceMatch[1],
+        filename: filename
+      };
+    }
   }
   
-  // Fallback to filename analysis
-  const filenameMatch = filename.match(/cadence[_\s-]*(\d+)/i) || 
-                       filename.match(/(\d+)/);
+  // Fallback to filename analysis - look for version patterns
+  const filenamePatterns = [
+    /(\d+\.\d+\.\d+)/,  // Look for version format in filename
+    /cadence[_\s-]*(\d+)/i,
+    /(\d+)/
+  ];
   
-  if (filenameMatch) {
-    return {
-      cadence: filenameMatch[1],
-      filename: filename
-    };
+  for (const pattern of filenamePatterns) {
+    const filenameMatch = filename.match(pattern);
+    if (filenameMatch) {
+      console.log(`Found cadence from filename: ${filenameMatch[1]}`);
+      return {
+        cadence: filenameMatch[1],
+        filename: filename
+      };
+    }
   }
   
   return null;
